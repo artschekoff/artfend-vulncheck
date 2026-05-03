@@ -15,7 +15,7 @@ todos:
     content: "Add VulnCheck KEV feed + Trivy DB. Update dedup to 6-source merge. Severity boost if CVE in KEV."
     status: pending
   - id: s3-sast-full
-    content: "Full Node.js SAST (20+ rules) + AI/LLM security rules (15+ rules: prompt injection, insecure direct LLM call, unvalidated LLM output, secret leakage via LLM, insecure MCP configs, vector DB injection, etc)."
+    content: "Full Node.js SAST (20+ rules) + AI/LLM security rules (15+ rules). Note: 3 LLM rules already shipped in Stage 1 (s1-llm-2): llm-prompt-injection, llm-missing-guardrail, llm-rag-unsanitized. Stage 3 adds the remaining ~12 AI/LLM patterns (insecure direct LLM call, unvalidated LLM output, secret leakage via LLM, insecure MCP configs, vector DB injection, eval of LLM output, SSRF via LLM URL, PII leak, rate-limit missing on LLM endpoints, LLM call without timeout/cost-cap, secrets in trace)."
     status: pending
   - id: s3-ai-multifile
     content: "Multi-file repo-level AI context: cross-file data flow, framework context (Express/Nest/Koa), config awareness (.env, nest-cli.json), previous-verdict feedback."
@@ -113,8 +113,10 @@ Ship the full Node.js AppSec story. By end of Stage 3:
 
 ### Full Node.js SAST + AI/LLM Rules (master Phase E)
 
+> **Stage 1 overlap note:** 3 LLM SAST rules are already implemented (`internal/sast/rules/llm/`): `llm-prompt-injection`, `llm-missing-guardrail`, `llm-rag-unsanitized` (s1-llm-2 ✅). Stage 3 extends `rules/semgrep/ai-llm.yaml` with the remaining ~12 patterns listed below — do not re-implement the 3 done rules.
+
 - `rules/semgrep/node-express-nest.yaml` -- 20+ rules covering: auth bypasses, CORS misconfig, CSRF, cookie insecure flags, JWT weak algs, rate-limit missing, open redirect, XXE, insecure file upload, MIME-type spoof, HTTP response splitting, mass assignment, etc.
-- `rules/semgrep/ai-llm.yaml` -- 15+ new rules:
+- `rules/semgrep/ai-llm.yaml` -- 15+ new rules (adds ~12 to the 3 from Stage 1):
   - Unsanitized user input concatenated into LLM prompt (prompt injection vector)
   - LLM output rendered without validation (XSS / code-exec via LLM)
   - API key in LLM client construction (prefer env)
