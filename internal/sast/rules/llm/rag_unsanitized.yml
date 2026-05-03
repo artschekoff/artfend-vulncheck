@@ -1,0 +1,20 @@
+rules:
+  - id: llm-rag-unsanitized
+    mode: taint
+    pattern-sources:
+      - pattern: $STORE.similarity_search(...)
+      - pattern: $COLLECTION.query(...)
+      - pattern: $RETRIEVER.get_relevant_documents(...)
+    pattern-sinks:
+      - pattern: f"...$DOCS..."
+      - pattern: |
+          {"content": f"...$DOCS..."}
+    message: >
+      RAG retrieval result flows into an LLM prompt without sanitization.
+      An attacker who controls indexed documents can perform indirect prompt injection.
+      Sanitize retrieved content before including it in prompts.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      owasp_llm: LLM01
+      cwe: CWE-77

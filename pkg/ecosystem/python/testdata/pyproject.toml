@@ -1,0 +1,8 @@
+[tool.poetry]
+name = "my-ai-app"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+anthropic = "^0.18.0"
+transformers = ">=4.30.0"

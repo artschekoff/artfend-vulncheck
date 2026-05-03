@@ -1,6 +1,6 @@
 ---
 name: VulnCheck Stage 1 -- MVP
-overview: 5-7 day MVP. A solo dev ships a Node.js scope-aware SCA scanner CLI + minimal API. Reads a package-lock.json (v1/v2/v3), builds a dependency graph with scope metadata (prod/dev/optional/peer), queries OSV.dev + npm audit, deduplicates findings, and computes a noise-reduced "effective severity" (Stage 1 slice). Goal: produce 90% fewer noisy alerts than raw npm audit on a real repo. No AI, no Git, no SAST, no supply chain detection, no dashboard. Just the core differentiator -- scope-aware dependency scanning.
+overview: "~2-week MVP. Ships two parallel tracks: (A) Node.js scope-aware SCA scanner CLI + minimal API -- reads package-lock.json, queries OSV.dev + npm audit, computes noise-reduced effective severity; (B) LLM/AI Security module -- Python AI ecosystem SCA, prompt injection SAST rules, OWASP LLM Top 10 test runner, AI model SBOM, guardrails config auditor, RAG pipeline scanner, CLI commands, dashboard. Goal: demonstrate both traditional SCA and AI-specific security in a single demoable product."
 todos:
   - id: s1-foundation
     content: "Foundation: go.mod, config, domain stubs, middleware, main.go, Makefile, migration 001, docker-compose"
@@ -34,6 +34,30 @@ todos:
     status: pending
   - id: s1-readme
     content: "README with install / run / first scan instructions"
+    status: pending
+  - id: s1-llm-1
+    content: "LLM SCA: Python AI ecosystem plugin (requirements.txt + pyproject.toml parser, curated AI package list, IsAIPackage flag). Extends pkg/ecosystem/ shared interface."
+    status: completed
+  - id: s1-llm-2
+    content: "LLM SAST: Semgrep rules for prompt injection (llm-prompt-injection, llm-missing-guardrail, llm-rag-unsanitized). Go embed loader + RunLLMRulesOnFile()."
+    status: completed
+  - id: s1-llm-3
+    content: "OWASP LLM Top 10 runner: OWASPRunner targeting OpenAI-compatible endpoint, tests for LLM01/02/06, httptest-verified, DB migration 007_llm_findings.sql."
+    status: completed
+  - id: s1-llm-4
+    content: "AI Model SBOM: DetectModels() scans Python source for model ID references (OpenAI, Anthropic, HuggingFace), flags deprecated/known-vulnerable models."
+    status: pending
+  - id: s1-llm-5
+    content: "Guardrails config auditor: ScanNeMoConfig() checks NeMo Guardrails YAML for missing PII output filter, jailbreak input check, NSFW filter."
+    status: pending
+  - id: s1-llm-6
+    content: "RAG security scanner: ScanPythonRAG() detects unauthenticated ChromaDB access and unsanitized retrieval injection into prompts."
+    status: pending
+  - id: s1-llm-7
+    content: "CLI: vulncheck llm test / guardrails / rag subcommands via Cobra. Wires all llmsec packages into CLI."
+    status: pending
+  - id: s1-llm-8
+    content: "Web dashboard: /llm-security React page with OWASP scorecard, model inventory, summary cards. TanStack Query + Tailwind."
     status: pending
 isProject: false
 ---
@@ -103,19 +127,44 @@ Only these components from the master plan, and only minimal slices:
 | AI Impact Analyzer | 2 |
 | Remediation engine (fix plans, upgrade paths) | 2 |
 | Dual policies (DB + `.vulncheck` file) | 2 |
-| SAST (Semgrep) | 2 (minimal) / 3 (full) |
+| SAST for general app code (Semgrep non-LLM rules) | 2 (minimal) / 3 (full) |
 | Supply chain detection (hooks / typosquat / new package) | 2 |
 | NVD, GHSA, VulnCheck, Trivy DB sources | 2 (NVD + GHSA) / 3 (rest) |
-| License, SBOM, Secrets | 3 |
+| License, SBOM, Secrets (non-AI) | 3 |
 | Fix PRs, Monitor, Jira, Notifications, PR Checks, Reports | 3 |
-| Behavioral package analysis, Hallucination detection | 3 |
-| Call-graph reachability | 3 |
+| Behavioral package analysis, Call-graph reachability | 3 |
 | Rego, VEX consumer, SLSA/Sigstore | 4 |
 | Container / OCI scanning | 4 |
-| Multi-ecosystem (Python, .NET, Go-as-target) | 4 |
-| Web dashboard | 3 minimal / 4 full |
+| Multi-ecosystem for SCA (Python/.NET/Go as general targets) | 4 |
+| Full web dashboard (non-LLM pages) | 3 minimal / 4 full |
 | IDE plugin | 4 |
 | ASPM, AI feedback loop, runtime eBPF agent | 5 |
+
+**Moved into Stage 1 scope (LLM SecOps track):**
+- Python AI ecosystem SCA (`pkg/ecosystem/python/`) — originally Stage 4, pulled in for LLM supply chain
+- Prompt injection SAST rules (`internal/sast/rules/llm/`) — originally Stage 2, pulled in for OWASP LLM01
+- LLM Security web dashboard page (`/llm-security`) — originally Stage 3+, pulled in for AI security posture
+- AI Model SBOM (LLM-specific, not general SBOM) — originally Stage 3, pulled in for model inventory
+
+## LLM SecOps Module (merged into Stage 1)
+
+Derived from OWASP LLM Top 10 and LLM SecOps Specialist job requirements. Eight tasks shipped alongside the npm SCA track, sharing the same `pkg/ecosystem/` plugin interface and `cmd/cli/` cobra structure.
+
+| Task | Feature | Status | Files |
+| --- | --- | --- | --- |
+| s1-llm-1 | Python AI Ecosystem SCA | ✅ done | `pkg/ecosystem/python/` |
+| s1-llm-2 | Prompt Injection SAST Rules | ✅ done | `internal/sast/rules/llm/` |
+| s1-llm-3 | OWASP LLM Top 10 Runner | ✅ done | `internal/llmsec/`, `migrations/007_llm_findings.sql` |
+| s1-llm-4 | AI Model SBOM | pending | `internal/llmsec/model_sbom.go` |
+| s1-llm-5 | Guardrails Config Auditor | pending | `internal/llmsec/guardrails/` |
+| s1-llm-6 | RAG Pipeline Security Scanner | pending | `internal/llmsec/rag/` |
+| s1-llm-7 | CLI: `vulncheck llm` commands | pending | `cmd/cli/llm.go` |
+| s1-llm-8 | LLM Security Dashboard | pending | `web/src/pages/llm-security/` |
+
+**Shared infrastructure (no duplication):**
+- `pkg/ecosystem/ecosystem.go` + `registry.go` — created by s1-llm-1, will also be used by npm parser (s1-npm-parser)
+- `pkg/ecosystem/registry.go` — single plugin registry for both npm and python-ai
+- `cmd/cli/` — shared cobra root, `vulncheck test` (SCA) and `vulncheck llm` (LLM) are sibling subcommands
 
 ## Effective Severity -- Stage 1 Formula
 
