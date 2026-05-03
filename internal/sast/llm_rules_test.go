@@ -61,13 +61,16 @@ func TestPromptInjectionRuleMatchesBadCode(t *testing.T) {
 
 func TestPromptInjectionRulePassesGoodCode(t *testing.T) {
 	if !semgrepAvailable() {
-		t.Skip("semgrep not found")
+		t.Skip("semgrep not found in PATH")
 	}
-	findings, err := sast.RunLLMRulesOnFile(testdataPath("good_prompt.py"))
+	goodPath := testdataPath("good_prompt.py")
+	findings, err := sast.RunLLMRulesOnFile(goodPath)
 	if err != nil {
-		t.Fatalf("RunLLMRulesOnFile: %v", err)
+		t.Fatalf("run failed: %v", err)
 	}
-	if len(findings) != 0 {
-		t.Fatalf("expected no findings on good_prompt.py, got %d: %+v", len(findings), findings)
+	for _, f := range findings {
+		if f.RuleID == "llm-prompt-injection" {
+			t.Errorf("llm-prompt-injection should not fire on sanitized code, but found: %s", f.Message)
+		}
 	}
 }

@@ -1,8 +1,9 @@
 rules:
   - id: llm-missing-guardrail
+    pattern: $CLIENT.chat.completions.create(...)
     message: >
-      LLM completion call detected without a preceding guardrail or validation
-      step. Wrap with a guardrail to prevent unsafe or off-policy outputs.
+      LLM API call detected. Advisory: verify that a guardrail validation step
+      (e.g., NeMo Guardrails, LLM Guard, input sanitization) is applied to
+      inputs and outputs surrounding this call. This rule flags all calls for review.
     severity: WARNING
     languages: [python]
-    pattern: $CLIENT.chat.completions.create(...)

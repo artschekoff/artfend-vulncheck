@@ -1,23 +1,14 @@
 rules:
   - id: llm-prompt-injection
+    patterns:
+      - pattern: |
+          {"content": f"...$INPUT..."}
     message: >
-      Unsanitized user input interpolated into LLM prompt. Validate and
-      sanitize before use to prevent prompt injection (LLM01).
+      Unsanitized variable is interpolated directly into an LLM prompt message.
+      An attacker can inject instructions that override the system prompt.
+      Sanitize and validate user input before including it in LLM messages.
     severity: ERROR
+    languages: [python]
     metadata:
       owasp_llm: LLM01
       cwe: CWE-77
-    languages: [python]
-    patterns:
-      - pattern: |
-          $CLIENT.chat.completions.create(
-              ...,
-              messages=[..., {"role": ..., "content": f"...{$USER_INPUT}..."}, ...],
-              ...
-          )
-      - pattern-not: |
-          $CLIENT.chat.completions.create(
-              ...,
-              messages=[..., {"role": ..., "content": f"...{$SAFE}[...]..."}, ...],
-              ...
-          )
