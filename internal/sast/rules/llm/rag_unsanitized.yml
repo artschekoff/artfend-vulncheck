@@ -1,0 +1,19 @@
+rules:
+  - id: llm-rag-unsanitized
+    message: >
+      Unsanitized retrieval results interpolated directly into LLM prompt.
+      Sanitize retrieved documents before injection to prevent RAG poisoning
+      (LLM01).
+    severity: ERROR
+    metadata:
+      owasp_llm: LLM01
+    languages: [python]
+    patterns:
+      - pattern: |
+          $PROMPT = f"...\n".join($DOCS)..."
+      - pattern: |
+          $PROMPT = f"...{"\n".join($DOCS)}..."
+      - pattern: |
+          $DOCS = $STORE.similarity_search(...)
+          ...
+          $PROMPT = f"...{$DOCS}..."

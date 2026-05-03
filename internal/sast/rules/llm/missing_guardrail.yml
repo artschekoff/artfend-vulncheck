@@ -1,0 +1,8 @@
+rules:
+  - id: llm-missing-guardrail
+    message: >
+      LLM completion call detected without a preceding guardrail or validation
+      step. Wrap with a guardrail to prevent unsafe or off-policy outputs.
+    severity: WARNING
+    languages: [python]
+    pattern: $CLIENT.chat.completions.create(...)
