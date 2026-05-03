@@ -2,6 +2,7 @@ package python
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -53,6 +54,63 @@ func TestParsePyproject(t *testing.T) {
 	}
 	if graph.ByName("python") != nil {
 		t.Error("python key should not be in packages")
+	}
+}
+
+func TestEcosystemPluginParse(t *testing.T) {
+	plugin := &EcosystemPlugin{}
+
+	reqContent := []byte("flask==3.0.0\n")
+	graph, err := plugin.Parse("requirements.txt", reqContent)
+	if err != nil {
+		t.Fatalf("Parse requirements.txt: %v", err)
+	}
+	if graph == nil {
+		t.Fatal("expected non-nil graph for requirements.txt")
+	}
+
+	pyprojectContent := []byte("[tool.poetry.dependencies]\nflask = \"3.0.0\"\n")
+	graph2, err := plugin.Parse("pyproject.toml", pyprojectContent)
+	if err != nil {
+		t.Fatalf("Parse pyproject.toml: %v", err)
+	}
+	if graph2 == nil {
+		t.Fatal("expected non-nil graph for pyproject.toml")
+	}
+
+	_, err = plugin.Parse("unknown.txt", []byte("something"))
+	if err == nil {
+		t.Fatal("expected error for unknown.txt, got nil")
+	}
+}
+
+func TestParseRequirementsNonEqualSpecifier(t *testing.T) {
+	content := []byte("requests>=2.0.0\nflask==3.0.0\n")
+	graph, err := ParseRequirements(content)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	// flask (==) must be present
+	if graph.ByName("flask") == nil {
+		t.Error("flask should be in graph")
+	}
+
+	// requests (>=) must be skipped from packages
+	if graph.ByName("requests") != nil {
+		t.Error("requests should NOT be in packages (non-== specifier)")
+	}
+
+	// warning must mention the skipped line
+	found := false
+	for _, w := range graph.Warnings {
+		if strings.Contains(w, "requests>=2.0.0") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected warning about skipped line 'requests>=2.0.0', got warnings: %v", graph.Warnings)
 	}
 }
 

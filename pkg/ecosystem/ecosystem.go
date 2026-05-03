@@ -10,12 +10,13 @@ type Package struct {
 
 type DepGraph struct {
 	Packages []Package
+	Warnings []string
 }
 
 func (g *DepGraph) ByName(name string) *Package {
 	lower := strings.ToLower(name)
 	for i := range g.Packages {
-		if strings.ToLower(g.Packages[i].Name) == lower {
+		if g.Packages[i].Name == lower {
 			return &g.Packages[i]
 		}
 	}

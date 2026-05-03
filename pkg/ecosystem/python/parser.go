@@ -10,6 +10,9 @@ import (
 	"github.com/artfend/vulncheck/pkg/ecosystem"
 )
 
+// compile-time interface guard
+var _ ecosystem.Parser = (*EcosystemPlugin)(nil)
+
 func ParseRequirements(content []byte) (*ecosystem.DepGraph, error) {
 	var graph ecosystem.DepGraph
 	for _, raw := range bytes.Split(content, []byte("\n")) {
@@ -19,6 +22,7 @@ func ParseRequirements(content []byte) (*ecosystem.DepGraph, error) {
 		}
 		parts := strings.SplitN(line, "==", 2)
 		if len(parts) != 2 {
+			graph.Warnings = append(graph.Warnings, fmt.Sprintf("skipped line: %s", line))
 			continue
 		}
 		name := strings.ToLower(strings.TrimSpace(parts[0]))
@@ -51,7 +55,18 @@ func ParsePyproject(content []byte) (*ecosystem.DepGraph, error) {
 		if name == "python" {
 			continue
 		}
-		version := stripSpecifiers(fmt.Sprintf("%v", v))
+		version := ""
+		switch val := v.(type) {
+		case string:
+			version = strings.TrimLeft(val, "^~>=<!")
+		case map[string]interface{}:
+			if vs, ok := val["version"].(string); ok {
+				version = strings.TrimLeft(vs, "^~>=<!")
+			}
+		default:
+			graph.Warnings = append(graph.Warnings, fmt.Sprintf("skipped dep %s: unsupported value type", name))
+			continue
+		}
 		graph.Packages = append(graph.Packages, ecosystem.Package{
 			Name:        name,
 			Version:     version,
@@ -59,10 +74,6 @@ func ParsePyproject(content []byte) (*ecosystem.DepGraph, error) {
 		})
 	}
 	return &graph, nil
-}
-
-func stripSpecifiers(v string) string {
-	return strings.TrimLeft(v, "^~>=<!")
 }
 
 type EcosystemPlugin struct{}
